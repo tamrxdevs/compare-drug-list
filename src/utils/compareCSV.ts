@@ -1,25 +1,31 @@
 import type { ColumnMapping, ComparisonResult, DifferentRow, MatchedRow, MatchType } from '../types';
 
 /** Normalize a value for comparison: lowercase, trim, collapse whitespace.
- *  If the value looks like a number (after stripping currency symbols and
- *  thousand-separator commas), compare it in pure numeric form so that
+ *  Strips currency symbols and thousand-separator commas so that
  *  "$1,767.48" and "1767.48" are treated as equal.
+ *  Values with leading zeros (GPI, NDC, product codes) are NOT converted
+ *  through Number() — that would silently destroy the leading zeros.
  */
 function normalize(val: string): string {
   const base = val.trim().toLowerCase().replace(/\s+/g, ' ');
 
-  // Strip leading/trailing currency symbols & whitespace, remove thousand commas
+  // Strip leading/trailing currency symbols, remove thousand-separator commas
   const stripped = base
     .replace(/^[\s$£€¥₩₹฿\+]+/, '')   // leading currency / sign chars
     .replace(/[\s$£€¥₩₹฿]+$/, '')     // trailing currency chars
     .replace(/,/g, '');                // thousand separators
 
-  if (stripped !== '' && !isNaN(Number(stripped))) {
-    // Canonical number: eliminates trailing zeros, sign differences, etc.
+  // Skip Number() conversion for values with leading zeros (codes/identifiers)
+  // or values longer than 15 digits (beyond JS float precision).
+  const looksNumeric = stripped !== '' && !isNaN(Number(stripped));
+  const hasLeadingZero = stripped.startsWith('0') && stripped.length > 1;
+  const tooLongForFloat = stripped.replace('.', '').length > 15;
+
+  if (looksNumeric && !hasLeadingZero && !tooLongForFloat) {
     return String(Number(stripped));
   }
 
-  return base;
+  return stripped || base;
 }
 
 /** Returns true if two values should be considered equal given a match type. */
