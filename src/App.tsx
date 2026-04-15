@@ -52,20 +52,18 @@ export default function App() {
   useEffect(() => {
     if (file1 && file2 && step === 'upload') {
       setStep('map');
-      // Create a mapping row for every File 1 column.
-      // Best-match File 2 column by name; fall back to same position, then first column.
+      // Exact-name match only; unmatched File 1 columns get file2Column = ''
       const usedFile2 = new Set<string>();
-      const allMappings: ColumnMapping[] = file1.headers.map((h1, i) => {
-        const exactMatch = file2.headers.find(
+      const allMappings: ColumnMapping[] = file1.headers.map((h1) => {
+        const match = file2.headers.find(
           (h2) => !usedFile2.has(h2) && h2.toLowerCase().trim() === h1.toLowerCase().trim()
         );
-        const fallback = file2.headers.find((h2) => !usedFile2.has(h2)) ?? file2.headers[0];
-        const file2Column = exactMatch ?? (file2.headers[i] && !usedFile2.has(file2.headers[i]) ? file2.headers[i] : fallback);
-        usedFile2.add(file2Column);
-        return { file1Column: h1, file2Column };
+        if (match) usedFile2.add(match);
+        return { file1Column: h1, file2Column: match ?? '' };
       });
       setMappings(allMappings);
-      setKeyColumns([allMappings[0].file1Column]);
+      const firstMapped = allMappings.find((m) => m.file2Column !== '');
+      if (firstMapped) setKeyColumns([firstMapped.file1Column]);
     }
   }, [file1, file2]);
 
@@ -86,7 +84,12 @@ export default function App() {
     setResult(null);
   };
 
-  const canCompare = file1 && file2 && mappings.length > 0 && keyColumns.length > 0;
+  const canCompare =
+    file1 &&
+    file2 &&
+    mappings.length > 0 &&
+    keyColumns.length > 0 &&
+    keyColumns.every((k) => mappings.find((m) => m.file1Column === k)?.file2Column);
 
   const handleFile1Change = (f: ParsedFile) => {
     setFile1(f);

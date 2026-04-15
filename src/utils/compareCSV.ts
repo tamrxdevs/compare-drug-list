@@ -6,6 +6,10 @@ export function compareCSV(
   keyMappings: ColumnMapping[],
   allMappings: ColumnMapping[]
 ): ComparisonResult {
+  // Only use mappings where a File 2 column has been selected
+  const activeMappings = allMappings.filter((m) => m.file2Column !== '');
+  const activeKeyMappings = keyMappings.filter((m) => m.file2Column !== '');
+
   const matched: MatchedRow[] = [];
   const different: DifferentRow[] = [];
   const onlyInFile1: Record<string, string>[] = [];
@@ -13,12 +17,12 @@ export function compareCSV(
 
   for (const f1Row of file1Rows) {
     // Build composite key from file1 row
-    const f1Key = keyMappings.map((m) => (f1Row[m.file1Column] ?? '').trim().toLowerCase()).join('|||');
+    const f1Key = activeKeyMappings.map((m) => (f1Row[m.file1Column] ?? '').trim().toLowerCase()).join('|||');
 
     // Find matching row in file2
     const f2Index = file2Rows.findIndex((f2Row, idx) => {
       if (matchedFile2Indices.has(idx)) return false;
-      const f2Key = keyMappings.map((m) => (f2Row[m.file2Column] ?? '').trim().toLowerCase()).join('|||');
+      const f2Key = activeKeyMappings.map((m) => (f2Row[m.file2Column] ?? '').trim().toLowerCase()).join('|||');
       return f1Key === f2Key;
     });
 
@@ -30,13 +34,13 @@ export function compareCSV(
     matchedFile2Indices.add(f2Index);
     const f2Row = file2Rows[f2Index];
     const keyValues: Record<string, string> = {};
-    keyMappings.forEach((m) => {
+    activeKeyMappings.forEach((m) => {
       keyValues[m.file1Column] = f1Row[m.file1Column] ?? '';
     });
 
-    // Check for differences across all mapped columns
-    const differences = allMappings
-      .filter((m) => !keyMappings.some((km) => km.file1Column === m.file1Column))
+    // Check for differences across all active mapped columns
+    const differences = activeMappings
+      .filter((m) => !activeKeyMappings.some((km) => km.file1Column === m.file1Column))
       .filter((m) => {
         const v1 = (f1Row[m.file1Column] ?? '').trim();
         const v2 = (f2Row[m.file2Column] ?? '').trim();

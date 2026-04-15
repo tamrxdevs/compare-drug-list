@@ -4,7 +4,7 @@ interface Props {
   file1Headers: string[];
   file2Headers: string[];
   mappings: ColumnMapping[];
-  keyColumns: string[]; // file1 column names used as keys
+  keyColumns: string[];
   onMappingsChange: (mappings: ColumnMapping[]) => void;
   onKeyColumnsChange: (keys: string[]) => void;
 }
@@ -24,10 +24,8 @@ export default function ColumnMapper({
 
   const addMapping = () => {
     const usedFile1 = new Set(mappings.map((m) => m.file1Column));
-    const usedFile2 = new Set(mappings.map((m) => m.file2Column));
-    const nextFile1 = file1Headers.find((h) => !usedFile1.has(h)) ?? '';
-    const nextFile2 = file2Headers.find((h) => !usedFile2.has(h)) ?? '';
-    onMappingsChange([...mappings, { file1Column: nextFile1, file2Column: nextFile2 }]);
+    const nextFile1 = file1Headers.find((h) => !usedFile1.has(h)) ?? file1Headers[0];
+    onMappingsChange([...mappings, { file1Column: nextFile1, file2Column: '' }]);
   };
 
   const removeMapping = (index: number) => {
@@ -45,21 +43,23 @@ export default function ColumnMapper({
   };
 
   const autoMap = () => {
+    // Exact-name match only; unmatched get file2Column = ''
     const usedFile2 = new Set<string>();
-    const newMappings: ColumnMapping[] = file1Headers.map((h1, i) => {
+    const newMappings: ColumnMapping[] = file1Headers.map((h1) => {
       const exact = file2Headers.find(
         (h2) => !usedFile2.has(h2) && h2.toLowerCase().trim() === h1.toLowerCase().trim()
       );
-      const fallback = file2Headers.find((h2) => !usedFile2.has(h2)) ?? file2Headers[0];
-      const file2Column = exact ?? (file2Headers[i] && !usedFile2.has(file2Headers[i]) ? file2Headers[i] : fallback);
-      usedFile2.add(file2Column);
-      return { file1Column: h1, file2Column };
+      if (exact) usedFile2.add(exact);
+      return { file1Column: h1, file2Column: exact ?? '' };
     });
     onMappingsChange(newMappings);
-    if (keyColumns.length === 0 && newMappings.length > 0) {
-      onKeyColumnsChange([newMappings[0].file1Column]);
+    if (keyColumns.length === 0) {
+      const firstMapped = newMappings.find((m) => m.file2Column !== '');
+      if (firstMapped) onKeyColumnsChange([firstMapped.file1Column]);
     }
   };
+
+  const unmappedCount = mappings.filter((m) => m.file2Column === '').length;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -99,25 +99,28 @@ export default function ColumnMapper({
       <div className="space-y-2">
         {mappings.map((mapping, index) => {
           const isKey = keyColumns.includes(mapping.file1Column);
+          const isUnmapped = mapping.file2Column === '';
+
           return (
             <div
               key={index}
-              className={`grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 items-center p-2 rounded-lg transition-colors
-                ${isKey ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50 border border-transparent'}`}
+              className={`grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 items-center p-2 rounded-lg border transition-colors
+                ${isKey
+                  ? 'bg-amber-50 border-amber-200'
+                  : isUnmapped
+                  ? 'bg-orange-50 border-orange-200'
+                  : 'bg-slate-50 border-transparent'
+                }`}
             >
-              {/* File 1 column select */}
-              <select
-                value={mapping.file1Column}
-                onChange={(e) => updateMapping(index, 'file1Column', e.target.value)}
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                {file1Headers.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
+              {/* File 1 column — read-only label for auto-generated rows */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="flex-1 text-sm font-medium text-slate-800 px-3 py-2 bg-white border border-slate-200 rounded-lg truncate">
+                  {mapping.file1Column}
+                </span>
+              </div>
 
               {/* Arrow */}
-              <div className="text-slate-400">
+              <div className={isUnmapped ? 'text-orange-400' : 'text-slate-400'}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
@@ -127,20 +130,28 @@ export default function ColumnMapper({
               <select
                 value={mapping.file2Column}
                 onChange={(e) => updateMapping(index, 'file2Column', e.target.value)}
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className={`w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2
+                  ${isUnmapped
+                    ? 'border-orange-300 text-orange-600 focus:ring-orange-400'
+                    : 'border-slate-200 text-slate-800 focus:ring-emerald-400'
+                  }`}
               >
+                <option value="" disabled>— Select column —</option>
                 {file2Headers.map((h) => (
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
 
-              {/* Key toggle */}
+              {/* Key toggle — disabled if not mapped */}
               <button
-                onClick={() => toggleKey(mapping.file1Column)}
-                title={isKey ? 'Remove as key column' : 'Set as key column'}
+                onClick={() => !isUnmapped && toggleKey(mapping.file1Column)}
+                disabled={isUnmapped}
+                title={isUnmapped ? 'Select a File 2 column first' : isKey ? 'Remove as key column' : 'Set as key column'}
                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-base
                   ${isKey
                     ? 'bg-amber-400 text-white hover:bg-amber-500'
+                    : isUnmapped
+                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                     : 'bg-white border border-slate-200 text-slate-400 hover:border-amber-400 hover:text-amber-400'
                   }`}
               >
@@ -177,7 +188,19 @@ export default function ColumnMapper({
         Add mapping
       </button>
 
-      {keyColumns.length === 0 && mappings.length > 0 && (
+      {/* Warnings */}
+      {unmappedCount > 0 && (
+        <div className="mt-4 flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <svg className="w-4 h-4 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-orange-700">
+            <strong>{unmappedCount} column{unmappedCount > 1 ? 's' : ''}</strong> not mapped — select a File 2 column or remove them. Unmapped rows are skipped during comparison.
+          </p>
+        </div>
+      )}
+
+      {keyColumns.length === 0 && mappings.some((m) => m.file2Column !== '') && (
         <div className="mt-4 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
