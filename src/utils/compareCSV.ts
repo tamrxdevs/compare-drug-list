@@ -1,8 +1,25 @@
 import type { ColumnMapping, ComparisonResult, DifferentRow, MatchedRow } from '../types';
 
-/** Normalize a value for comparison: lowercase, trim, collapse whitespace. */
+/** Normalize a value for comparison: lowercase, trim, collapse whitespace.
+ *  If the value looks like a number (after stripping currency symbols and
+ *  thousand-separator commas), compare it in pure numeric form so that
+ *  "$1,767.48" and "1767.48" are treated as equal.
+ */
 function normalize(val: string): string {
-  return val.trim().toLowerCase().replace(/\s+/g, ' ');
+  const base = val.trim().toLowerCase().replace(/\s+/g, ' ');
+
+  // Strip leading/trailing currency symbols & whitespace, remove thousand commas
+  const stripped = base
+    .replace(/^[\s$£€¥₩₹฿\+]+/, '')   // leading currency / sign chars
+    .replace(/[\s$£€¥₩₹฿]+$/, '')     // trailing currency chars
+    .replace(/,/g, '');                // thousand separators
+
+  if (stripped !== '' && !isNaN(Number(stripped))) {
+    // Canonical number: eliminates trailing zeros, sign differences, etc.
+    return String(Number(stripped));
+  }
+
+  return base;
 }
 
 export function compareCSV(
