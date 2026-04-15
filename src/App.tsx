@@ -50,6 +50,7 @@ export default function App() {
   const [mappings, setMappings] = useState<ColumnMapping[]>([]);
   const [keyColumns, setKeyColumns] = useState<string[]>([]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [isComparing, setIsComparing] = useState(false);
 
   // Auto-advance to map step when both files uploaded
   useEffect(() => {
@@ -63,11 +64,15 @@ export default function App() {
     }
   }, [file1, file2]);
 
-  const handleCompare = () => {
+  const handleCompare = async () => {
     if (!file1 || !file2 || keyColumns.length === 0) return;
+    setIsComparing(true);
+    // Yield to the browser so the loading state renders before the heavy work
+    await new Promise((resolve) => setTimeout(resolve, 50));
     const keyMappings = mappings.filter((m) => keyColumns.includes(m.file1Column));
     const comparison = compareCSV(file1.rows, file2.rows, keyMappings, mappings);
     setResult(comparison);
+    setIsComparing(false);
     setStep('results');
   };
 
@@ -188,17 +193,29 @@ export default function App() {
             <div className="flex justify-end">
               <button
                 onClick={handleCompare}
-                disabled={!canCompare}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all
-                  ${canCompare
+                disabled={!canCompare || isComparing}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all min-w-[160px] justify-center
+                  ${canCompare && !isComparing
                     ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200 hover:shadow-lg hover:-translate-y-0.5'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Compare Files
+                {isComparing ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Comparing…
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Compare Files
+                  </>
+                )}
               </button>
             </div>
           </>
