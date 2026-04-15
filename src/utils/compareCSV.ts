@@ -1,4 +1,4 @@
-import type { ColumnMapping, ComparisonResult, DifferentRow, MatchedRow } from '../types';
+import type { ColumnMapping, ComparisonResult, DifferentRow, MatchedRow, MatchType } from '../types';
 
 /** Normalize a value for comparison: lowercase, trim, collapse whitespace.
  *  If the value looks like a number (after stripping currency symbols and
@@ -20,6 +20,18 @@ function normalize(val: string): string {
   }
 
   return base;
+}
+
+/** Returns true if two values should be considered equal given a match type. */
+function valuesMatch(a: string, b: string, matchType: MatchType): boolean {
+  const na = normalize(a);
+  const nb = normalize(b);
+  if (matchType === 'startsWith') {
+    // Consider a match if the shorter value is a prefix of the longer one.
+    // e.g. Drug Name "Abilify..." matches Variant Name "Abilify... Tablet Pack 2mg"
+    return na === nb || na.startsWith(nb) || nb.startsWith(na);
+  }
+  return na === nb;
 }
 
 export function compareCSV(
@@ -63,7 +75,11 @@ export function compareCSV(
     // Check for differences across all active mapped columns
     const differences = activeMappings
       .filter((m) => !activeKeyMappings.some((km) => km.file1Column === m.file1Column))
-      .filter((m) => normalize(f1Row[m.file1Column] ?? '') !== normalize(f2Row[m.file2Column] ?? ''))
+      .filter((m) => !valuesMatch(
+        f1Row[m.file1Column] ?? '',
+        f2Row[m.file2Column] ?? '',
+        m.matchType ?? 'exact'
+      ))
       .map((m) => ({
         file1Column: m.file1Column,
         file2Column: m.file2Column,

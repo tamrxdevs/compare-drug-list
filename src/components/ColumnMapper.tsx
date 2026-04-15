@@ -1,4 +1,4 @@
-import type { ColumnMapping } from '../types';
+import type { ColumnMapping, MatchType } from '../types';
 import { buildSmartMappings } from '../utils/smartMatch';
 
 interface Props {
@@ -18,8 +18,8 @@ export default function ColumnMapper({
   onMappingsChange,
   onKeyColumnsChange,
 }: Props) {
-  const updateMapping = (index: number, value: string) => {
-    const updated = mappings.map((m, i) => (i === index ? { ...m, file2Column: value } : m));
+  const updateMapping = (index: number, field: 'file2Column' | 'matchType', value: string) => {
+    const updated = mappings.map((m, i) => (i === index ? { ...m, [field]: value } : m));
     onMappingsChange(updated);
   };
 
@@ -67,7 +67,7 @@ export default function ColumnMapper({
       </div>
 
       {/* Header row */}
-      <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 mb-2 px-1">
+      <div className="grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 mb-2 px-1">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">File 1 Column</span>
@@ -77,16 +77,18 @@ export default function ColumnMapper({
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">File 2 Column</span>
         </div>
+        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide text-center w-24">Match</div>
         <div />
       </div>
 
       <div className="space-y-2">
         {mappings.map((mapping, index) => {
           const isUnmapped = mapping.file2Column === '';
+          const matchType: MatchType = mapping.matchType ?? 'exact';
           return (
             <div
               key={index}
-              className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2 rounded-lg border transition-colors
+              className={`grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 items-center p-2 rounded-lg border transition-colors
                 ${isUnmapped ? 'bg-orange-50 border-orange-200' : 'bg-slate-50 border-transparent'}`}
             >
               {/* File 1 column label */}
@@ -104,7 +106,7 @@ export default function ColumnMapper({
               {/* File 2 column select */}
               <select
                 value={mapping.file2Column}
-                onChange={(e) => updateMapping(index, e.target.value)}
+                onChange={(e) => updateMapping(index, 'file2Column', e.target.value)}
                 className={`w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2
                   ${isUnmapped
                     ? 'border-orange-300 text-orange-600 focus:ring-orange-400'
@@ -115,6 +117,28 @@ export default function ColumnMapper({
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
+
+              {/* Match type toggle */}
+              <div className="w-24 flex rounded-lg overflow-hidden border border-slate-200 text-xs font-medium">
+                <button
+                  onClick={() => updateMapping(index, 'matchType', 'exact')}
+                  title="Exact match"
+                  className={`flex-1 py-2 transition-colors ${matchType === 'exact'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                >
+                  = Exact
+                </button>
+                <button
+                  onClick={() => updateMapping(index, 'matchType', 'startsWith')}
+                  title="Match if one value starts with the other (e.g. Drug Name vs Variant Name)"
+                  className={`flex-1 py-2 border-l border-slate-200 transition-colors ${matchType === 'startsWith'
+                    ? 'bg-violet-600 text-white'
+                    : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                >
+                  ⊂ Prefix
+                </button>
+              </div>
 
               {/* Remove */}
               <button

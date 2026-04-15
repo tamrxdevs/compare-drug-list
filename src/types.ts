@@ -4,9 +4,12 @@ export interface ParsedFile {
   rows: Record<string, string>[];
 }
 
+export type MatchType = 'exact' | 'startsWith';
+
 export interface ColumnMapping {
   file1Column: string;
   file2Column: string;
+  matchType?: MatchType; // default: 'exact'
 }
 
 export interface ComparisonResult {
