@@ -1,5 +1,10 @@
 import type { ColumnMapping, ComparisonResult, DifferentRow, MatchedRow } from '../types';
 
+/** Normalize a value for comparison: lowercase, trim, collapse whitespace. */
+function normalize(val: string): string {
+  return val.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 export function compareCSV(
   file1Rows: Record<string, string>[],
   file2Rows: Record<string, string>[],
@@ -17,12 +22,12 @@ export function compareCSV(
 
   for (const f1Row of file1Rows) {
     // Build composite key from file1 row
-    const f1Key = activeKeyMappings.map((m) => (f1Row[m.file1Column] ?? '').trim().toLowerCase()).join('|||');
+    const f1Key = activeKeyMappings.map((m) => normalize(f1Row[m.file1Column] ?? '')).join('|||');
 
     // Find matching row in file2
     const f2Index = file2Rows.findIndex((f2Row, idx) => {
       if (matchedFile2Indices.has(idx)) return false;
-      const f2Key = activeKeyMappings.map((m) => (f2Row[m.file2Column] ?? '').trim().toLowerCase()).join('|||');
+      const f2Key = activeKeyMappings.map((m) => normalize(f2Row[m.file2Column] ?? '')).join('|||');
       return f1Key === f2Key;
     });
 
@@ -41,11 +46,7 @@ export function compareCSV(
     // Check for differences across all active mapped columns
     const differences = activeMappings
       .filter((m) => !activeKeyMappings.some((km) => km.file1Column === m.file1Column))
-      .filter((m) => {
-        const v1 = (f1Row[m.file1Column] ?? '').trim();
-        const v2 = (f2Row[m.file2Column] ?? '').trim();
-        return v1 !== v2;
-      })
+      .filter((m) => normalize(f1Row[m.file1Column] ?? '') !== normalize(f2Row[m.file2Column] ?? ''))
       .map((m) => ({
         file1Column: m.file1Column,
         file2Column: m.file2Column,
