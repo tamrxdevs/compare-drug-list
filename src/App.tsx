@@ -4,6 +4,7 @@ import ColumnMapper from './components/ColumnMapper';
 import ComparisonResults from './components/ComparisonResults';
 import type { ParsedFile, ColumnMapping, ComparisonResult } from './types';
 import { compareCSV } from './utils/compareCSV';
+import { buildSmartMappings } from './utils/smartMatch';
 
 type Step = 'upload' | 'map' | 'results';
 
@@ -52,15 +53,8 @@ export default function App() {
   useEffect(() => {
     if (file1 && file2 && step === 'upload') {
       setStep('map');
-      // Exact-name match only; unmatched File 1 columns get file2Column = ''
-      const usedFile2 = new Set<string>();
-      const allMappings: ColumnMapping[] = file1.headers.map((h1) => {
-        const match = file2.headers.find(
-          (h2) => !usedFile2.has(h2) && h2.toLowerCase().trim() === h1.toLowerCase().trim()
-        );
-        if (match) usedFile2.add(match);
-        return { file1Column: h1, file2Column: match ?? '' };
-      });
+      // Smart word-overlap match; unmatched File 1 columns get file2Column = ''
+      const allMappings = buildSmartMappings(file1.headers, file2.headers);
       setMappings(allMappings);
       const firstMapped = allMappings.find((m) => m.file2Column !== '');
       if (firstMapped) setKeyColumns([firstMapped.file1Column]);

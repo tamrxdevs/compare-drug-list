@@ -1,4 +1,5 @@
 import type { ColumnMapping } from '../types';
+import { buildSmartMappings } from '../utils/smartMatch';
 
 interface Props {
   file1Headers: string[];
@@ -43,15 +44,7 @@ export default function ColumnMapper({
   };
 
   const autoMap = () => {
-    // Exact-name match only; unmatched get file2Column = ''
-    const usedFile2 = new Set<string>();
-    const newMappings: ColumnMapping[] = file1Headers.map((h1) => {
-      const exact = file2Headers.find(
-        (h2) => !usedFile2.has(h2) && h2.toLowerCase().trim() === h1.toLowerCase().trim()
-      );
-      if (exact) usedFile2.add(exact);
-      return { file1Column: h1, file2Column: exact ?? '' };
-    });
+    const newMappings = buildSmartMappings(file1Headers, file2Headers);
     onMappingsChange(newMappings);
     if (keyColumns.length === 0) {
       const firstMapped = newMappings.find((m) => m.file2Column !== '');
