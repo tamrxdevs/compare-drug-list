@@ -2,32 +2,6 @@ import { useCallback, useState } from 'react';
 import Papa from 'papaparse';
 import type { ParsedFile } from '../types';
 
-/**
- * Excel saves long numeric codes (GPI, NDC, etc.) as scientific notation
- * in CSV files, e.g. 30124034000000 → 3.0124034E+13.
- * This converts them back to their full integer string form.
- */
-function expandScientific(val: string): string {
-  const match = val.trim().match(/^(-?)(\d+)\.?(\d*)[eE]\+(\d+)$/i);
-  if (!match) return val;
-  const [, sign, intPart, fracPart, expStr] = match;
-  const exp = parseInt(expStr, 10);
-  const allDigits = intPart + fracPart;
-  const shift = exp - fracPart.length;
-  if (shift < 0) return val; // has fractional remainder — leave as-is
-  return sign + allDigits + '0'.repeat(shift);
-}
-
-function expandRows(rows: Record<string, string>[]): Record<string, string>[] {
-  return rows.map((row) => {
-    const out: Record<string, string> = {};
-    for (const key of Object.keys(row)) {
-      out[key] = expandScientific(row[key] ?? '');
-    }
-    return out;
-  });
-}
-
 interface Props {
   label: string;
   fileNumber: 1 | 2;
@@ -57,7 +31,7 @@ export default function FileUpload({ label, fileNumber, onFileParsed, parsedFile
           onFileParsed({
             name: file.name,
             headers: results.meta.fields,
-            rows: expandRows(results.data),
+            rows: results.data,
           });
         },
         error(err) {
