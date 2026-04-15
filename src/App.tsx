@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import FileUpload from './components/FileUpload';
+import FilePreview from './components/FilePreview';
 import ColumnMapper from './components/ColumnMapper';
 import ComparisonResults from './components/ComparisonResults';
 import type { ParsedFile, ColumnMapping, ComparisonResult } from './types';
@@ -165,6 +166,7 @@ export default function App() {
         {/* Step: Map columns */}
         {step === 'map' && file1 && file2 && (
           <>
+            <FilePreview file1={file1} file2={file2} />
             <ColumnMapper
               file1Headers={file1.headers}
               file2Headers={file2.headers}
