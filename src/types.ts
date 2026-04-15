@@ -4,6 +4,11 @@ export interface ParsedFile {
   rows: Record<string, string>[];
 }
 
+export interface RowFilter {
+  column: string;
+  value: string;
+}
+
 export type MatchType = 'exact' | 'startsWith';
 
 export interface ColumnMapping {

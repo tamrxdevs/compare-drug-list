@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import FileUpload from './components/FileUpload';
 import FilePreview from './components/FilePreview';
 import RowMatcher from './components/RowMatcher';
+import RowFilterPanel from './components/RowFilterPanel';
 import ColumnMapper from './components/ColumnMapper';
 import ComparisonResults from './components/ComparisonResults';
-import type { ParsedFile, ColumnMapping, ComparisonResult } from './types';
+import type { ParsedFile, ColumnMapping, ComparisonResult, RowFilter } from './types';
 import { compareCSV } from './utils/compareCSV';
 import { buildSmartMappings } from './utils/smartMatch';
 
@@ -49,6 +50,7 @@ export default function App() {
   const [file2, setFile2] = useState<ParsedFile | null>(null);
   const [mappings, setMappings] = useState<ColumnMapping[]>([]);
   const [keyColumns, setKeyColumns] = useState<string[]>([]);
+  const [filters, setFilters] = useState<RowFilter[]>([]);
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [isComparing, setIsComparing] = useState(false);
 
@@ -70,7 +72,10 @@ export default function App() {
     // Yield to the browser so the loading state renders before the heavy work
     await new Promise((resolve) => setTimeout(resolve, 50));
     const keyMappings = mappings.filter((m) => keyColumns.includes(m.file1Column));
-    const comparison = compareCSV(file1.rows, file2.rows, keyMappings, mappings);
+    const filteredFile1Rows = filters.length > 0
+      ? file1.rows.filter((row) => !filters.some((f) => (row[f.column] ?? '').trim() === f.value))
+      : file1.rows;
+    const comparison = compareCSV(filteredFile1Rows, file2.rows, keyMappings, mappings);
     setResult(comparison);
     setIsComparing(false);
     setStep('results');
@@ -96,6 +101,7 @@ export default function App() {
     setFile1(f);
     setMappings([]);
     setKeyColumns([]);
+    setFilters([]);
     setResult(null);
     setStep((s) => (s === 'results' ? 'map' : s));
   };
@@ -188,6 +194,12 @@ export default function App() {
               file1={file1}
               file2={file2}
               onKeyColumnsChange={setKeyColumns}
+            />
+
+            <RowFilterPanel
+              file1={file1}
+              filters={filters}
+              onFiltersChange={setFilters}
             />
 
             <div className="flex justify-end">
