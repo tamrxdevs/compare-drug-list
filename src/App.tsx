@@ -52,31 +52,20 @@ export default function App() {
   useEffect(() => {
     if (file1 && file2 && step === 'upload') {
       setStep('map');
-      // Auto-generate mappings
-      const autoMappings: ColumnMapping[] = [];
+      // Create a mapping row for every File 1 column.
+      // Best-match File 2 column by name; fall back to same position, then first column.
       const usedFile2 = new Set<string>();
-      for (const h1 of file1.headers) {
-        const match = file2.headers.find(
+      const allMappings: ColumnMapping[] = file1.headers.map((h1, i) => {
+        const exactMatch = file2.headers.find(
           (h2) => !usedFile2.has(h2) && h2.toLowerCase().trim() === h1.toLowerCase().trim()
         );
-        if (match) {
-          autoMappings.push({ file1Column: h1, file2Column: match });
-          usedFile2.add(match);
-        }
-      }
-      if (autoMappings.length > 0) {
-        setMappings(autoMappings);
-        setKeyColumns([autoMappings[0].file1Column]);
-      } else {
-        // Fallback: map by position
-        const len = Math.min(file1.headers.length, file2.headers.length);
-        const posMappings: ColumnMapping[] = [];
-        for (let i = 0; i < len; i++) {
-          posMappings.push({ file1Column: file1.headers[i], file2Column: file2.headers[i] });
-        }
-        setMappings(posMappings);
-        if (posMappings.length > 0) setKeyColumns([posMappings[0].file1Column]);
-      }
+        const fallback = file2.headers.find((h2) => !usedFile2.has(h2)) ?? file2.headers[0];
+        const file2Column = exactMatch ?? (file2.headers[i] && !usedFile2.has(file2.headers[i]) ? file2.headers[i] : fallback);
+        usedFile2.add(file2Column);
+        return { file1Column: h1, file2Column };
+      });
+      setMappings(allMappings);
+      setKeyColumns([allMappings[0].file1Column]);
     }
   }, [file1, file2]);
 

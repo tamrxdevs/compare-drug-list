@@ -45,23 +45,19 @@ export default function ColumnMapper({
   };
 
   const autoMap = () => {
-    const newMappings: ColumnMapping[] = [];
     const usedFile2 = new Set<string>();
-    for (const h1 of file1Headers) {
+    const newMappings: ColumnMapping[] = file1Headers.map((h1, i) => {
       const exact = file2Headers.find(
         (h2) => !usedFile2.has(h2) && h2.toLowerCase().trim() === h1.toLowerCase().trim()
       );
-      if (exact) {
-        newMappings.push({ file1Column: h1, file2Column: exact });
-        usedFile2.add(exact);
-      }
-    }
-    if (newMappings.length > 0) {
-      onMappingsChange(newMappings);
-      // Auto-select first mapped column as key if no keys yet
-      if (keyColumns.length === 0 && newMappings.length > 0) {
-        onKeyColumnsChange([newMappings[0].file1Column]);
-      }
+      const fallback = file2Headers.find((h2) => !usedFile2.has(h2)) ?? file2Headers[0];
+      const file2Column = exact ?? (file2Headers[i] && !usedFile2.has(file2Headers[i]) ? file2Headers[i] : fallback);
+      usedFile2.add(file2Column);
+      return { file1Column: h1, file2Column };
+    });
+    onMappingsChange(newMappings);
+    if (keyColumns.length === 0 && newMappings.length > 0) {
+      onKeyColumnsChange([newMappings[0].file1Column]);
     }
   };
 
