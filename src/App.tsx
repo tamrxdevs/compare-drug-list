@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import FileUpload from './components/FileUpload';
 import FilePreview from './components/FilePreview';
+import RowMatcher from './components/RowMatcher';
 import ColumnMapper from './components/ColumnMapper';
 import ComparisonResults from './components/ComparisonResults';
 import type { ParsedFile, ColumnMapping, ComparisonResult } from './types';
@@ -173,6 +174,14 @@ export default function App() {
               mappings={mappings}
               keyColumns={keyColumns}
               onMappingsChange={setMappings}
+              onKeyColumnsChange={setKeyColumns}
+            />
+
+            <RowMatcher
+              mappings={mappings}
+              keyColumns={keyColumns}
+              file1={file1}
+              file2={file2}
               onKeyColumnsChange={setKeyColumns}
             />
 

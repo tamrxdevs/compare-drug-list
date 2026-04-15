@@ -18,8 +18,8 @@ export default function ColumnMapper({
   onMappingsChange,
   onKeyColumnsChange,
 }: Props) {
-  const updateMapping = (index: number, field: 'file1Column' | 'file2Column', value: string) => {
-    const updated = mappings.map((m, i) => (i === index ? { ...m, [field]: value } : m));
+  const updateMapping = (index: number, value: string) => {
+    const updated = mappings.map((m, i) => (i === index ? { ...m, file2Column: value } : m));
     onMappingsChange(updated);
   };
 
@@ -33,14 +33,6 @@ export default function ColumnMapper({
     const removed = mappings[index].file1Column;
     onMappingsChange(mappings.filter((_, i) => i !== index));
     onKeyColumnsChange(keyColumns.filter((k) => k !== removed));
-  };
-
-  const toggleKey = (file1Column: string) => {
-    if (keyColumns.includes(file1Column)) {
-      onKeyColumnsChange(keyColumns.filter((k) => k !== file1Column));
-    } else {
-      onKeyColumnsChange([...keyColumns, file1Column]);
-    }
   };
 
   const autoMap = () => {
@@ -60,7 +52,7 @@ export default function ColumnMapper({
         <div>
           <h2 className="text-lg font-semibold text-slate-800">Column Mapping</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Map columns from File 1 to File 2. Mark key columns <span className="text-amber-600 font-medium">(★)</span> used for row matching.
+            Map each File 1 column to its equivalent in File 2.
           </p>
         </div>
         <button
@@ -75,42 +67,32 @@ export default function ColumnMapper({
       </div>
 
       {/* Header row */}
-      <div className="grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 mb-2 px-1">
+      <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 mb-2 px-1">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">File 1 Column</span>
         </div>
         <div />
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">File 2 Column</span>
         </div>
-        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Key</div>
         <div />
       </div>
 
       <div className="space-y-2">
         {mappings.map((mapping, index) => {
-          const isKey = keyColumns.includes(mapping.file1Column);
           const isUnmapped = mapping.file2Column === '';
-
           return (
             <div
               key={index}
-              className={`grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 items-center p-2 rounded-lg border transition-colors
-                ${isKey
-                  ? 'bg-amber-50 border-amber-200'
-                  : isUnmapped
-                  ? 'bg-orange-50 border-orange-200'
-                  : 'bg-slate-50 border-transparent'
-                }`}
+              className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2 rounded-lg border transition-colors
+                ${isUnmapped ? 'bg-orange-50 border-orange-200' : 'bg-slate-50 border-transparent'}`}
             >
-              {/* File 1 column — read-only label for auto-generated rows */}
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="flex-1 text-sm font-medium text-slate-800 px-3 py-2 bg-white border border-slate-200 rounded-lg truncate">
-                  {mapping.file1Column}
-                </span>
-              </div>
+              {/* File 1 column label */}
+              <span className="text-sm font-medium text-slate-800 px-3 py-2 bg-white border border-slate-200 rounded-lg truncate">
+                {mapping.file1Column}
+              </span>
 
               {/* Arrow */}
               <div className={isUnmapped ? 'text-orange-400' : 'text-slate-400'}>
@@ -122,34 +104,17 @@ export default function ColumnMapper({
               {/* File 2 column select */}
               <select
                 value={mapping.file2Column}
-                onChange={(e) => updateMapping(index, 'file2Column', e.target.value)}
+                onChange={(e) => updateMapping(index, e.target.value)}
                 className={`w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2
                   ${isUnmapped
                     ? 'border-orange-300 text-orange-600 focus:ring-orange-400'
-                    : 'border-slate-200 text-slate-800 focus:ring-emerald-400'
-                  }`}
+                    : 'border-slate-200 text-slate-800 focus:ring-emerald-400'}`}
               >
                 <option value="" disabled>— Select column —</option>
                 {file2Headers.map((h) => (
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
-
-              {/* Key toggle — disabled if not mapped */}
-              <button
-                onClick={() => !isUnmapped && toggleKey(mapping.file1Column)}
-                disabled={isUnmapped}
-                title={isUnmapped ? 'Select a File 2 column first' : isKey ? 'Remove as key column' : 'Set as key column'}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-base
-                  ${isKey
-                    ? 'bg-amber-400 text-white hover:bg-amber-500'
-                    : isUnmapped
-                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                    : 'bg-white border border-slate-200 text-slate-400 hover:border-amber-400 hover:text-amber-400'
-                  }`}
-              >
-                ★
-              </button>
 
               {/* Remove */}
               <button
@@ -181,25 +146,13 @@ export default function ColumnMapper({
         Add mapping
       </button>
 
-      {/* Warnings */}
       {unmappedCount > 0 && (
         <div className="mt-4 flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
           <svg className="w-4 h-4 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-sm text-orange-700">
-            <strong>{unmappedCount} column{unmappedCount > 1 ? 's' : ''}</strong> not mapped — select a File 2 column or remove them. Unmapped rows are skipped during comparison.
-          </p>
-        </div>
-      )}
-
-      {keyColumns.length === 0 && mappings.some((m) => m.file2Column !== '') && (
-        <div className="mt-4 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-amber-700">
-            Mark at least one column as a <strong>Key (★)</strong> to identify matching rows.
+            <strong>{unmappedCount} column{unmappedCount > 1 ? 's' : ''}</strong> not yet mapped — select a File 2 column or remove them.
           </p>
         </div>
       )}
