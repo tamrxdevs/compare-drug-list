@@ -142,7 +142,7 @@ export default function App() {
             <p className="text-sm text-slate-500 mb-5">Upload two CSV files to compare. Both files need headers in the first row.</p>
             <div className="flex gap-4 flex-col sm:flex-row">
               <FileUpload
-                label="Source File"
+                label="Prod Database File"
                 fileNumber={1}
                 parsedFile={file1}
                 onFileParsed={handleFile1Change}
@@ -155,7 +155,7 @@ export default function App() {
                 </div>
               </div>
               <FileUpload
-                label="Target File"
+                label="Exported File from Medispan (Vercel)"
                 fileNumber={2}
                 parsedFile={file2}
                 onFileParsed={handleFile2Change}
