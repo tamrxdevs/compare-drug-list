@@ -44,13 +44,20 @@ export function compareCSV(
   const activeMappings = allMappings.filter((m) => m.file2Column !== '');
   const activeKeyMappings = keyMappings.filter((m) => m.file2Column !== '');
 
-  // Pre-build a map from normalized File 2 key → first matching index
-  // so multiple File 1 rows (e.g. different qty variants) can all match
-  // the same File 2 drug entry without the second one falling through.
-  const f2KeyIndexMap = new Map<string, number>();
+  // Pre-build two maps from normalized File 2 key:
+  //   f2KeyFirstIndex  → first File 2 row index for that key (used for comparison)
+  //   f2KeyAllIndices  → ALL File 2 row indices for that key (used for "only in file 2" tracking)
+  // This handles both:
+  //   many-to-one:  multiple File 1 variants → same File 2 drug
+  //   one-to-many:  same File 2 drug has multiple variant rows that all need to be marked matched
+  const f2KeyFirstIndex = new Map<string, number>();
+  const f2KeyAllIndices = new Map<string, number[]>();
   file2Rows.forEach((f2Row, idx) => {
     const key = activeKeyMappings.map((m) => normalize(f2Row[m.file2Column] ?? '')).join('|||');
-    if (!f2KeyIndexMap.has(key)) f2KeyIndexMap.set(key, idx);
+    if (!f2KeyFirstIndex.has(key)) f2KeyFirstIndex.set(key, idx);
+    const arr = f2KeyAllIndices.get(key) ?? [];
+    arr.push(idx);
+    f2KeyAllIndices.set(key, arr);
   });
 
   const matched: MatchedRow[] = [];
@@ -62,15 +69,15 @@ export function compareCSV(
     // Build composite key from file1 row
     const f1Key = activeKeyMappings.map((m) => normalize(f1Row[m.file1Column] ?? '')).join('|||');
 
-    // Allow many-to-one: multiple File 1 variants can match the same File 2 row
-    const f2Index = f2KeyIndexMap.get(f1Key) ?? -1;
+    const f2Index = f2KeyFirstIndex.get(f1Key) ?? -1;
 
     if (f2Index === -1) {
       onlyInFile1.push(f1Row);
       continue;
     }
 
-    matchedFile2Indices.add(f2Index);
+    // Mark ALL File 2 rows with this key as matched so none appear in "Only in File 2"
+    (f2KeyAllIndices.get(f1Key) ?? []).forEach((i) => matchedFile2Indices.add(i));
     const f2Row = file2Rows[f2Index];
     const keyValues: Record<string, string> = {};
     activeKeyMappings.forEach((m) => {
