@@ -44,6 +44,15 @@ export function compareCSV(
   const activeMappings = allMappings.filter((m) => m.file2Column !== '');
   const activeKeyMappings = keyMappings.filter((m) => m.file2Column !== '');
 
+  // Pre-build a map from normalized File 2 key → first matching index
+  // so multiple File 1 rows (e.g. different qty variants) can all match
+  // the same File 2 drug entry without the second one falling through.
+  const f2KeyIndexMap = new Map<string, number>();
+  file2Rows.forEach((f2Row, idx) => {
+    const key = activeKeyMappings.map((m) => normalize(f2Row[m.file2Column] ?? '')).join('|||');
+    if (!f2KeyIndexMap.has(key)) f2KeyIndexMap.set(key, idx);
+  });
+
   const matched: MatchedRow[] = [];
   const different: DifferentRow[] = [];
   const onlyInFile1: Record<string, string>[] = [];
@@ -53,12 +62,8 @@ export function compareCSV(
     // Build composite key from file1 row
     const f1Key = activeKeyMappings.map((m) => normalize(f1Row[m.file1Column] ?? '')).join('|||');
 
-    // Find matching row in file2
-    const f2Index = file2Rows.findIndex((f2Row, idx) => {
-      if (matchedFile2Indices.has(idx)) return false;
-      const f2Key = activeKeyMappings.map((m) => normalize(f2Row[m.file2Column] ?? '')).join('|||');
-      return f1Key === f2Key;
-    });
+    // Allow many-to-one: multiple File 1 variants can match the same File 2 row
+    const f2Index = f2KeyIndexMap.get(f1Key) ?? -1;
 
     if (f2Index === -1) {
       onlyInFile1.push(f1Row);
